@@ -264,11 +264,3 @@ func (es *EmbeddingService) BatchGenerateEmbeddings(ctx context.Context, texts [
 
 	return embeddings, nil
 }
-
-// Close closes the embedding service and cleans up resources
-func (es *EmbeddingService) Close() error {
-	if es.client != nil {
-		return es.Close()
-	}
-	return nil
-}
