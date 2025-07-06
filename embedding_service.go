@@ -1,4 +1,4 @@
-package main
+package genai_sdk
 
 import (
 	"context"
