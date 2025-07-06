@@ -1,4 +1,4 @@
-package custom_chat
+package main
 
 import (
 	"context"

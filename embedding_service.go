@@ -1,4 +1,4 @@
-package custom_embedded
+package main
 
 import (
 	"context"
