@@ -1,1 +1,1 @@
-# go-genai-sdk
+# Go genai SDK adapter
