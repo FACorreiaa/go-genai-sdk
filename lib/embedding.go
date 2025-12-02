@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -24,6 +25,15 @@ const (
 type EmbeddingService struct {
 	client *genai.Client
 	logger *slog.Logger
+}
+
+// Close provides a noop closer to align with consumers expecting a cleanup hook.
+// The underlying genai client does not expose any shutdown behavior, but the
+// method allows deferred cleanup in tests without nil-pointer checks.
+func (es *EmbeddingService) Close() {
+	if es == nil {
+		return
+	}
 }
 
 type EmbeddingRequest struct {
@@ -130,6 +140,13 @@ func (es *EmbeddingService) GeneratePOIEmbedding(ctx context.Context, name, desc
 	))
 	defer span.End()
 
+	if strings.TrimSpace(name) == "" {
+		err := fmt.Errorf("poi name cannot be empty")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Invalid POI name")
+		return nil, err
+	}
+
 	// Create a comprehensive text representation of the POI
 	var text string
 	if description != "" {
@@ -155,6 +172,13 @@ func (es *EmbeddingService) GenerateCityEmbedding(ctx context.Context, name, cou
 		attribute.String("city.country", country),
 	))
 	defer span.End()
+
+	if strings.TrimSpace(name) == "" {
+		err := fmt.Errorf("city name cannot be empty")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Invalid city name")
+		return nil, err
+	}
 
 	// Create a comprehensive text representation of the city
 	text := fmt.Sprintf("City: %s, Country: %s", name, country)

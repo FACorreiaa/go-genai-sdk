@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"iter"
 	"log"
+	"strings"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -26,11 +27,11 @@ func NewLLMChatClient(ctx context.Context, apiKey string) (*LLMChatClient, error
 	ctx, span := otel.Tracer("GenerativeAI").Start(ctx, "NewAIClient")
 	defer span.End()
 
-	if apiKey == "" {
-		err := fmt.Errorf("GEMINI_API_KEY environment variable is not set")
+	if strings.TrimSpace(apiKey) == "" {
+		err := fmt.Errorf("gemini api key is required")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "API key not set")
-		log.Fatal(err)
+		return nil, err
 	}
 
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{
@@ -61,6 +62,13 @@ func (ai *LLMChatClient) GenerateContent(ctx context.Context, prompt, apiKey str
 		attribute.String("model", *model),
 	))
 	defer span.End()
+
+	if strings.TrimSpace(prompt) == "" {
+		err := fmt.Errorf("prompt cannot be empty")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Empty prompt provided")
+		return "", err
+	}
 
 	newClient, err := NewLLMChatClient(ctx, apiKey)
 
