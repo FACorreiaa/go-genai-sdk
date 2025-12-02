@@ -9,7 +9,7 @@ import (
 
 // LiveSession wraps the genai live session to simplify streaming use-cases like voice-to-LLM.
 type LiveSession struct {
-	session *genai.LiveSession
+	session *genai.Session
 }
 
 // StartLiveSession opens a live connection to the specified model for bidirectional streaming (text/audio/video).
@@ -41,9 +41,7 @@ func (s *LiveSession) SendText(text string) error {
 		return fmt.Errorf("text is empty")
 	}
 	return s.SendRealtimeInput(genai.LiveRealtimeInput{
-		ClientContent: &genai.LiveClientContent{
-			Turns: []genai.LiveClientTurn{{Parts: []genai.Part{genai.Text(text)}}},
-		},
+		Text: text,
 	})
 }
 
@@ -56,7 +54,7 @@ func (s *LiveSession) SendAudioPCM(data []byte, mimeType string) error {
 		mimeType = "audio/pcm"
 	}
 	return s.SendRealtimeInput(genai.LiveRealtimeInput{
-		InlineData: &genai.Blob{
+		Audio: &genai.Blob{
 			MIMEType: mimeType,
 			Data:     data,
 		},
@@ -64,7 +62,7 @@ func (s *LiveSession) SendAudioPCM(data []byte, mimeType string) error {
 }
 
 // Receive blocks until the next response is returned from the live model.
-func (s *LiveSession) Receive() (*genai.LiveResponse, error) {
+func (s *LiveSession) Receive() (*genai.LiveServerMessage, error) {
 	if s == nil || s.session == nil {
 		return nil, fmt.Errorf("session not initialized")
 	}

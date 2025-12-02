@@ -150,11 +150,6 @@ func (ai *LLMChatClient) Model() string {
 	return ai.ModelName
 }
 
-// Model returns the configured model name.
-func (ai *LLMChatClient) Model() string {
-	return ai.ModelName
-}
-
 // GenerateContentStream initiates a streaming content generation process.
 func (ai *LLMChatClient) GenerateContentStream(
 	ctx context.Context,
