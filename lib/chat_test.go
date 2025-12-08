@@ -29,7 +29,7 @@ func TestNewGeminiChatClient(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			client, err := NewGeminiChatClient(ctx, tt.apiKey, "gemini-2.0-flash")
+			client, err := NewGeminiChatClient(ctx, tt.apiKey, "gemini-2.5-flash")
 
 			if tt.expectError {
 				if err == nil {
@@ -63,7 +63,7 @@ func TestGeminiChatClient_GenerateResponse(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.0-flash")
+	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.5-flash")
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestGeminiChatClient_GenerateContent(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.0-flash")
+	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.5-flash")
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestGeminiChatClient_StartChatSession(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.0-flash")
+	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.5-flash")
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -191,7 +191,7 @@ func TestChatSession_SendMessage(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.0-flash")
+	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.5-flash")
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -253,7 +253,7 @@ func TestChatSession_ConversationFlow(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.0-flash")
+	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.5-flash")
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -299,7 +299,7 @@ func TestGeminiChatClient_GenerateContentStream(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.0-flash")
+	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.5-flash")
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -350,7 +350,7 @@ func TestGeminiChatClient_GenerateContentStreamWithCache(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.0-flash")
+	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.5-flash")
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -398,7 +398,7 @@ func TestChatSession_SendMessageStream(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.0-flash")
+	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.5-flash")
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -451,7 +451,7 @@ func TestGeminiChatClient_WithTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.0-flash")
+	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.5-flash")
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -480,7 +480,7 @@ func BenchmarkGeminiChatClient_GenerateContent(b *testing.B) {
 	}
 
 	ctx := context.Background()
-	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.0-flash")
+	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.5-flash")
 	if err != nil {
 		b.Fatalf("failed to create client: %v", err)
 	}

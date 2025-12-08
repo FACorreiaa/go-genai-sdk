@@ -146,7 +146,7 @@ Generates embeddings for multiple texts in a single batch.
 ### Model Configuration
 
 The SDK uses the following default models:
-- Chat: `gemini-2.0-flash`
+- Chat: `gemini-2.5-flash`
 - Embeddings: `gemini-embedding-exp-03-07`
 
 ## Testing
