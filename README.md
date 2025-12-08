@@ -8,7 +8,6 @@ A Go SDK for Google's Gemini AI API, providing easy-to-use interfaces for chat f
 - **Embeddings API**: Generate embeddings for text, POIs, cities, and user preferences
 - **Streaming Support**: Real-time response streaming
 - **Batch Processing**: Generate multiple embeddings in batches
-- **OpenTelemetry Integration**: Built-in observability and tracing
 - **Comprehensive Testing**: Full test coverage with integration tests
 
 ## Installation
