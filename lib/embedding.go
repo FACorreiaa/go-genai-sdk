@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 
 	"google.golang.org/genai"
@@ -35,12 +34,10 @@ type GeminiEmbeddingClient struct {
 }
 
 // NewGeminiEmbeddingClient creates an EmbeddingClient backed by Gemini.
-func NewGeminiEmbeddingClient(ctx context.Context, modelName string, logger *slog.Logger) (EmbeddingClient, error) {
-	apiKey := os.Getenv("GEMINI_API_KEY")
+func NewGeminiEmbeddingClient(ctx context.Context, apiKey, modelName string, logger *slog.Logger) (EmbeddingClient, error) {
 	if apiKey == "" {
-		return nil, fmt.Errorf("GEMINI_API_KEY environment variable is not set")
+		return nil, fmt.Errorf("API key is required")
 	}
-
 	if modelName == "" {
 		modelName = EmbeddingModel
 	}

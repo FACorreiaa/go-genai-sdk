@@ -8,10 +8,15 @@ import (
 	"os"
 
 	genai_sdk "github.com/FACorreiaa/go-genai-sdk/lib"
+	"github.com/joho/godotenv"
 	"google.golang.org/genai"
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		slog.Warn("Error loading .env file")
+		log.Fatal(err)
+	}
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
@@ -140,7 +145,7 @@ func streamingChatExample(ctx context.Context, apiKey string) error {
 
 func basicEmbeddingExample(ctx context.Context, logger *slog.Logger) error {
 	// Updated to NewGeminiEmbeddingClient
-	service, err := genai_sdk.NewGeminiEmbeddingClient(ctx, "", logger)
+	service, err := genai_sdk.NewGeminiEmbeddingClient(ctx, "", "", logger)
 	if err != nil {
 		return fmt.Errorf("failed to create embedding service: %w", err)
 	}
@@ -166,7 +171,7 @@ func basicEmbeddingExample(ctx context.Context, logger *slog.Logger) error {
 }
 
 func poiEmbeddingExample(ctx context.Context, logger *slog.Logger) error {
-	service, err := genai_sdk.NewGeminiEmbeddingClient(ctx, "", logger)
+	service, err := genai_sdk.NewGeminiEmbeddingClient(ctx, "", "", logger)
 	if err != nil {
 		return fmt.Errorf("failed to create embedding service: %w", err)
 	}
@@ -183,7 +188,7 @@ func poiEmbeddingExample(ctx context.Context, logger *slog.Logger) error {
 }
 
 func batchEmbeddingExample(ctx context.Context, logger *slog.Logger) error {
-	service, err := genai_sdk.NewGeminiEmbeddingClient(ctx, "", logger)
+	service, err := genai_sdk.NewGeminiEmbeddingClient(ctx, "", "", logger)
 	if err != nil {
 		return fmt.Errorf("failed to create embedding service: %w", err)
 	}

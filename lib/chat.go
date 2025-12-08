@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"iter"
 	"log/slog"
-	"os"
 
 	"google.golang.org/genai"
 )
@@ -29,10 +28,10 @@ type GeminiChatClient struct {
 // NewGeminiChatClient creates a ChatClient backed by Gemini.
 func NewGeminiChatClient(ctx context.Context, apiKey, modelName string) (ChatClient, error) {
 	if apiKey == "" {
-		apiKey = os.Getenv("GEMINI_API_KEY")
+		return nil, fmt.Errorf("API key is required")
 	}
 	if modelName == "" {
-		modelName = "gemini-2.0-flash"
+		return nil, fmt.Errorf("Model name is required")
 	}
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{APIKey: apiKey})
 	if err != nil {

@@ -43,7 +43,7 @@ func TestNewGeminiEmbeddingClient(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			client, err := NewGeminiEmbeddingClient(ctx, "", logger)
+			client, err := NewGeminiEmbeddingClient(ctx, "", "", logger)
 
 			if tt.expectError {
 				if err == nil {
@@ -88,7 +88,7 @@ func TestGeminiEmbeddingClient_GenerateEmbedding(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	ctx := context.Background()
 
-	service, err := NewGeminiEmbeddingClient(ctx, "", logger)
+	service, err := NewGeminiEmbeddingClient(ctx, "", "", logger)
 	if err != nil {
 		t.Fatalf("failed to create embedding service: %v", err)
 	}
@@ -170,7 +170,7 @@ func TestGeminiEmbeddingClient_GenerateEmbeddingWithConfig(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	ctx := context.Background()
 
-	service, err := NewGeminiEmbeddingClient(ctx, "", logger)
+	service, err := NewGeminiEmbeddingClient(ctx, "", "", logger)
 	if err != nil {
 		t.Fatalf("failed to create embedding service: %v", err)
 	}
@@ -224,7 +224,7 @@ func TestGeminiEmbeddingClient_GeneratePOIEmbedding(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	ctx := context.Background()
 
-	service, err := NewGeminiEmbeddingClient(ctx, "", logger)
+	service, err := NewGeminiEmbeddingClient(ctx, "", "", logger)
 	if err != nil {
 		t.Fatalf("failed to create embedding service: %v", err)
 	}
@@ -296,7 +296,7 @@ func TestGeminiEmbeddingClient_GenerateCityEmbedding(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	ctx := context.Background()
 
-	service, err := NewGeminiEmbeddingClient(ctx, "", logger)
+	service, err := NewGeminiEmbeddingClient(ctx, "", "", logger)
 	if err != nil {
 		t.Fatalf("failed to create embedding service: %v", err)
 	}
@@ -368,7 +368,7 @@ func TestGeminiEmbeddingClient_GenerateUserPreferenceEmbedding(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	ctx := context.Background()
 
-	service, err := NewGeminiEmbeddingClient(ctx, "", logger)
+	service, err := NewGeminiEmbeddingClient(ctx, "", "", logger)
 	if err != nil {
 		t.Fatalf("failed to create embedding service: %v", err)
 	}
@@ -442,7 +442,7 @@ func TestGeminiEmbeddingClient_GenerateQueryEmbedding(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	ctx := context.Background()
 
-	service, err := NewGeminiEmbeddingClient(ctx, "", logger)
+	service, err := NewGeminiEmbeddingClient(ctx, "", "", logger)
 	if err != nil {
 		t.Fatalf("failed to create embedding service: %v", err)
 	}
@@ -506,7 +506,7 @@ func TestGeminiEmbeddingClient_BatchGenerateEmbeddings(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	ctx := context.Background()
 
-	service, err := NewGeminiEmbeddingClient(ctx, "", logger)
+	service, err := NewGeminiEmbeddingClient(ctx, "", "", logger)
 	if err != nil {
 		t.Fatalf("failed to create embedding service: %v", err)
 	}
@@ -582,7 +582,7 @@ func TestGeminiEmbeddingClient_EmbeddingSimilarity(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	ctx := context.Background()
 
-	service, err := NewGeminiEmbeddingClient(ctx, "", logger)
+	service, err := NewGeminiEmbeddingClient(ctx, "", "", logger)
 	if err != nil {
 		t.Fatalf("failed to create embedding service: %v", err)
 	}
@@ -639,7 +639,7 @@ func TestGeminiEmbeddingClient_WithTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	service, err := NewGeminiEmbeddingClient(ctx, "", logger)
+	service, err := NewGeminiEmbeddingClient(ctx, "", "", logger)
 	if err != nil {
 		t.Fatalf("failed to create embedding service: %v", err)
 	}
@@ -690,7 +690,7 @@ func BenchmarkGeminiEmbeddingClient_GenerateEmbedding(b *testing.B) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	ctx := context.Background()
 
-	service, err := NewGeminiEmbeddingClient(ctx, "", logger)
+	service, err := NewGeminiEmbeddingClient(ctx, "", "", logger)
 	if err != nil {
 		b.Fatalf("failed to create embedding service: %v", err)
 	}
@@ -718,7 +718,7 @@ func BenchmarkGeminiEmbeddingClient_BatchGenerateEmbeddings(b *testing.B) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	ctx := context.Background()
 
-	service, err := NewGeminiEmbeddingClient(ctx, "", logger)
+	service, err := NewGeminiEmbeddingClient(ctx, "", "", logger)
 	if err != nil {
 		b.Fatalf("failed to create embedding service: %v", err)
 	}
