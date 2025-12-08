@@ -32,7 +32,7 @@ func NewGeminiChatClient(ctx context.Context, apiKey, modelName string) (ChatCli
 		apiKey = os.Getenv("GEMINI_API_KEY")
 	}
 	if modelName == "" {
-		modelName = "gemini-1.5-flash"
+		modelName = "gemini-2.0-flash"
 	}
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{APIKey: apiKey})
 	if err != nil {
