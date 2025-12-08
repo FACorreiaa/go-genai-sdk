@@ -65,7 +65,7 @@ func main() {
 
 func basicChatExample(ctx context.Context, apiKey string) error {
 	// Updated to use NewGeminiChatClient and default model
-	client, err := genai_sdk.NewGeminiChatClient(ctx, apiKey, "gemini-1.5-flash")
+	client, err := genai_sdk.NewGeminiChatClient(ctx, apiKey, "gemini-2.0-flash")
 	if err != nil {
 		return fmt.Errorf("failed to create chat client: %w", err)
 	}
@@ -85,7 +85,7 @@ func basicChatExample(ctx context.Context, apiKey string) error {
 }
 
 func chatSessionExample(ctx context.Context, apiKey string) error {
-	client, err := genai_sdk.NewGeminiChatClient(ctx, apiKey, "gemini-1.5-flash")
+	client, err := genai_sdk.NewGeminiChatClient(ctx, apiKey, "gemini-2.0-flash")
 	if err != nil {
 		return fmt.Errorf("failed to create chat client: %w", err)
 	}
@@ -117,7 +117,7 @@ func chatSessionExample(ctx context.Context, apiKey string) error {
 }
 
 func streamingChatExample(ctx context.Context, apiKey string) error {
-	client, err := genai_sdk.NewGeminiChatClient(ctx, apiKey, "gemini-1.5-flash")
+	client, err := genai_sdk.NewGeminiChatClient(ctx, apiKey, "gemini-2.0-flash")
 	if err != nil {
 		return fmt.Errorf("failed to create chat client: %w", err)
 	}
