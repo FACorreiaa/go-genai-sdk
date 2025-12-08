@@ -2,3 +2,4 @@ vendor
 .env
 .cache
 go-genai-sdk
+.idea

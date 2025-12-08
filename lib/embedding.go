@@ -7,10 +7,6 @@ import (
 	"os"
 	"strings"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/genai"
 )
 
@@ -22,40 +18,31 @@ const (
 	EmbeddingDimension = 768
 )
 
-type EmbeddingService struct {
+// EmbeddingClient abstracts embedding operations needed by domain services.
+type EmbeddingClient interface {
+	GenerateQueryEmbedding(ctx context.Context, query string) ([]float32, error)
+	GeneratePOIEmbedding(ctx context.Context, name, description, category string) ([]float32, error)
+	GenerateCityEmbedding(ctx context.Context, name, country, description string) ([]float32, error)
+	GenerateUserPreferenceEmbedding(ctx context.Context, interests []string, preferences map[string]string) ([]float32, error)
+	BatchGenerateEmbeddings(ctx context.Context, texts []string) ([][]float32, error)
+	Close()
+}
+
+// GeminiEmbeddingClient adapts the generativeAI embedding service.
+type GeminiEmbeddingClient struct {
 	client *genai.Client
 	logger *slog.Logger
 }
 
-// Close provides a noop closer to align with consumers expecting a cleanup hook.
-// The underlying genai client does not expose any shutdown behavior, but the
-// method allows deferred cleanup in tests without nil-pointer checks.
-func (es *EmbeddingService) Close() {
-	if es == nil {
-		return
-	}
-}
-
-type EmbeddingRequest struct {
-	Text string `json:"text"`
-	Type string `json:"type,omitempty"` // "poi", "city", "user_preference", etc.
-}
-
-type EmbeddingResponse struct {
-	Embedding []float32 `json:"embedding"`
-	Dimension int       `json:"dimension"`
-}
-
-func NewEmbeddingService(ctx context.Context, logger *slog.Logger) (*EmbeddingService, error) {
-	ctx, span := otel.Tracer("EmbeddingService").Start(ctx, "NewEmbeddingService")
-	defer span.End()
-
+// NewGeminiEmbeddingClient creates an EmbeddingClient backed by Gemini.
+func NewGeminiEmbeddingClient(ctx context.Context, modelName string, logger *slog.Logger) (EmbeddingClient, error) {
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
-		err := fmt.Errorf("GEMINI_API_KEY environment variable is not set")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "API key not set")
-		return nil, err
+		return nil, fmt.Errorf("GEMINI_API_KEY environment variable is not set")
+	}
+
+	if modelName == "" {
+		modelName = EmbeddingModel
 	}
 
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{
@@ -63,38 +50,31 @@ func NewEmbeddingService(ctx context.Context, logger *slog.Logger) (*EmbeddingSe
 		Backend: genai.BackendGeminiAPI,
 	})
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to create Gemini client")
 		return nil, fmt.Errorf("failed to create Gemini client: %w", err)
 	}
 
-	span.SetStatus(codes.Ok, "Embedding service created successfully")
-	return &EmbeddingService{
+	return &GeminiEmbeddingClient{
 		client: client,
 		logger: logger,
 	}, nil
 }
 
-// GenerateEmbedding generates an embedding vector for the given text
-func (es *EmbeddingService) GenerateEmbedding(ctx context.Context, text string, config *genai.EmbedContentConfig) ([]float32, error) {
-	ctx, span := otel.Tracer("EmbeddingService").Start(ctx, "GenerateEmbedding", trace.WithAttributes(
-		attribute.String("text.length", fmt.Sprintf("%d", len(text))),
-		attribute.String("model", EmbeddingModel),
-	))
-	defer span.End()
+// Close provides a noop closer to align with consumers expecting a cleanup hook.
+func (es *GeminiEmbeddingClient) Close() {
+	if es == nil {
+		return
+	}
+}
 
+// GenerateEmbedding generates an embedding vector for the given text
+func (es *GeminiEmbeddingClient) GenerateEmbedding(ctx context.Context, text string, config *genai.EmbedContentConfig) ([]float32, error) {
 	if text == "" {
-		err := fmt.Errorf("text cannot be empty")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Empty text provided")
-		return nil, err
+		return nil, fmt.Errorf("text cannot be empty")
 	}
 
 	// Use the embedding model to generate embeddings
 	embedding, err := es.client.Models.EmbedContent(ctx, EmbeddingModel, genai.Text(text), config)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to generate embedding")
 		es.logger.ErrorContext(ctx, "Failed to generate embedding",
 			slog.Any("error", err),
 			slog.String("text_preview", text[:min(100, len(text))]))
@@ -103,26 +83,14 @@ func (es *EmbeddingService) GenerateEmbedding(ctx context.Context, text string, 
 
 	// Extract the embedding values
 	if embedding == nil || len(embedding.Embeddings) == 0 {
-		err := fmt.Errorf("received empty embedding from API")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Empty embedding received")
-		return nil, err
+		return nil, fmt.Errorf("received empty embedding from API")
 	}
 
 	// Get the first embedding (assuming single text input)
 	contentEmbedding := embedding.Embeddings[0]
 	if contentEmbedding == nil || len(contentEmbedding.Values) == 0 {
-		err := fmt.Errorf("received empty embedding values from API")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Empty embedding values received")
-		return nil, err
+		return nil, fmt.Errorf("received empty embedding values from API")
 	}
-
-	span.SetAttributes(
-		attribute.Int("embedding.dimension", len(contentEmbedding.Values)),
-		attribute.String("embedding.model", EmbeddingModel),
-	)
-	span.SetStatus(codes.Ok, "Embedding generated successfully")
 
 	es.logger.DebugContext(ctx, "Embedding generated",
 		slog.Int("dimension", len(contentEmbedding.Values)),
@@ -132,19 +100,9 @@ func (es *EmbeddingService) GenerateEmbedding(ctx context.Context, text string, 
 }
 
 // GeneratePOIEmbedding generates an embedding specifically for POI data
-func (es *EmbeddingService) GeneratePOIEmbedding(ctx context.Context, name, description, category string) ([]float32, error) {
-
-	ctx, span := otel.Tracer("EmbeddingService").Start(ctx, "GeneratePOIEmbedding", trace.WithAttributes(
-		attribute.String("poi.name", name),
-		attribute.String("poi.category", category),
-	))
-	defer span.End()
-
+func (es *GeminiEmbeddingClient) GeneratePOIEmbedding(ctx context.Context, name, description, category string) ([]float32, error) {
 	if strings.TrimSpace(name) == "" {
-		err := fmt.Errorf("poi name cannot be empty")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Invalid POI name")
-		return nil, err
+		return nil, fmt.Errorf("poi name cannot be empty")
 	}
 
 	// Create a comprehensive text representation of the POI
@@ -157,27 +115,16 @@ func (es *EmbeddingService) GeneratePOIEmbedding(ctx context.Context, name, desc
 
 	embedding, err := es.GenerateEmbedding(ctx, text, nil)
 	if err != nil {
-		span.RecordError(err)
 		return nil, fmt.Errorf("failed to generate POI embedding: %w", err)
 	}
 
-	span.SetStatus(codes.Ok, "POI embedding generated successfully")
 	return embedding, nil
 }
 
 // GenerateCityEmbedding generates an embedding specifically for city data
-func (es *EmbeddingService) GenerateCityEmbedding(ctx context.Context, name, country, description string) ([]float32, error) {
-	ctx, span := otel.Tracer("EmbeddingService").Start(ctx, "GenerateCityEmbedding", trace.WithAttributes(
-		attribute.String("city.name", name),
-		attribute.String("city.country", country),
-	))
-	defer span.End()
-
+func (es *GeminiEmbeddingClient) GenerateCityEmbedding(ctx context.Context, name, country, description string) ([]float32, error) {
 	if strings.TrimSpace(name) == "" {
-		err := fmt.Errorf("city name cannot be empty")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Invalid city name")
-		return nil, err
+		return nil, fmt.Errorf("city name cannot be empty")
 	}
 
 	// Create a comprehensive text representation of the city
@@ -188,22 +135,14 @@ func (es *EmbeddingService) GenerateCityEmbedding(ctx context.Context, name, cou
 
 	embedding, err := es.GenerateEmbedding(ctx, text, nil)
 	if err != nil {
-		span.RecordError(err)
 		return nil, fmt.Errorf("failed to generate city embedding: %w", err)
 	}
 
-	span.SetStatus(codes.Ok, "City embedding generated successfully")
 	return embedding, nil
 }
 
 // GenerateUserPreferenceEmbedding generates an embedding for user preferences
-func (es *EmbeddingService) GenerateUserPreferenceEmbedding(ctx context.Context, interests []string, preferences map[string]string) ([]float32, error) {
-	ctx, span := otel.Tracer("EmbeddingService").Start(ctx, "GenerateUserPreferenceEmbedding", trace.WithAttributes(
-		attribute.Int("interests.count", len(interests)),
-		attribute.Int("preferences.count", len(preferences)),
-	))
-	defer span.End()
-
+func (es *GeminiEmbeddingClient) GenerateUserPreferenceEmbedding(ctx context.Context, interests []string, preferences map[string]string) ([]float32, error) {
 	// Create a text representation of user preferences
 	text := "User Interests: "
 	for i, interest := range interests {
@@ -222,44 +161,26 @@ func (es *EmbeddingService) GenerateUserPreferenceEmbedding(ctx context.Context,
 
 	embedding, err := es.GenerateEmbedding(ctx, text, nil)
 	if err != nil {
-		span.RecordError(err)
 		return nil, fmt.Errorf("failed to generate user preference embedding: %w", err)
 	}
 
-	span.SetStatus(codes.Ok, "User preference embedding generated successfully")
 	return embedding, nil
 }
 
 // GenerateQueryEmbedding generates an embedding for search queries
-func (es *EmbeddingService) GenerateQueryEmbedding(ctx context.Context, query string) ([]float32, error) {
-	ctx, span := otel.Tracer("EmbeddingService").Start(ctx, "GenerateQueryEmbedding", trace.WithAttributes(
-		attribute.String("query", query),
-	))
-	defer span.End()
-
+func (es *GeminiEmbeddingClient) GenerateQueryEmbedding(ctx context.Context, query string) ([]float32, error) {
 	embedding, err := es.GenerateEmbedding(ctx, query, nil)
 	if err != nil {
-		span.RecordError(err)
 		return nil, fmt.Errorf("failed to generate query embedding: %w", err)
 	}
 
-	span.SetAttributes(attribute.String("query.text", query))
-	span.SetStatus(codes.Ok, "Query embedding generated successfully")
 	return embedding, nil
 }
 
 // BatchGenerateEmbeddings generates embeddings for multiple texts at once
-func (es *EmbeddingService) BatchGenerateEmbeddings(ctx context.Context, texts []string) ([][]float32, error) {
-	ctx, span := otel.Tracer("EmbeddingService").Start(ctx, "BatchGenerateEmbeddings", trace.WithAttributes(
-		attribute.Int("batch.size", len(texts)),
-	))
-	defer span.End()
-
+func (es *GeminiEmbeddingClient) BatchGenerateEmbeddings(ctx context.Context, texts []string) ([][]float32, error) {
 	if len(texts) == 0 {
-		err := fmt.Errorf("no texts provided for batch embedding")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Empty batch")
-		return nil, err
+		return nil, fmt.Errorf("no texts provided for batch embedding")
 	}
 
 	embeddings := make([][]float32, len(texts))
@@ -270,17 +191,9 @@ func (es *EmbeddingService) BatchGenerateEmbeddings(ctx context.Context, texts [
 	for i, text := range texts {
 		embeddings[i], err = es.GenerateEmbedding(ctx, text, nil)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, fmt.Sprintf("Failed at index %d", i))
 			return nil, fmt.Errorf("failed to generate embedding for text at index %d: %w", i, err)
 		}
 	}
-
-	span.SetAttributes(
-		attribute.Int("successful.embeddings", len(embeddings)),
-		attribute.String("model", EmbeddingModel),
-	)
-	span.SetStatus(codes.Ok, "Batch embeddings generated successfully")
 
 	es.logger.InfoContext(ctx, "Batch embeddings generated",
 		slog.Int("count", len(embeddings)),

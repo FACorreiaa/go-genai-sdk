@@ -59,16 +59,17 @@ func main() {
 }
 
 func basicChatExample(ctx context.Context, apiKey string) error {
-	client, err := genai_sdk.NewLLMChatClient(ctx, apiKey)
+	// Updated to use NewGeminiChatClient and default model
+	client, err := genai_sdk.NewGeminiChatClient(ctx, apiKey, "gemini-1.5-flash")
 	if err != nil {
 		return fmt.Errorf("failed to create chat client: %w", err)
 	}
 
 	config := &genai.GenerateContentConfig{
 		Temperature:     genai.Ptr[float32](0.7),
-		MaxOutputTokens: *genai.Ptr[int32](1000),
+		MaxOutputTokens: *genai.Ptr[int32](1000), // Assuming fixed or will fix to 1000 or *genai.Ptr(1000)
 	}
-
+	// Note: apiKey arg in GenerateContent is legacy/interface compatibility, pass same key or ignore
 	response, err := client.GenerateContent(ctx, "Hello! Tell me a short joke.", apiKey, config)
 	if err != nil {
 		return fmt.Errorf("failed to generate content: %w", err)
@@ -79,7 +80,7 @@ func basicChatExample(ctx context.Context, apiKey string) error {
 }
 
 func chatSessionExample(ctx context.Context, apiKey string) error {
-	client, err := genai_sdk.NewLLMChatClient(ctx, apiKey)
+	client, err := genai_sdk.NewGeminiChatClient(ctx, apiKey, "gemini-1.5-flash")
 	if err != nil {
 		return fmt.Errorf("failed to create chat client: %w", err)
 	}
@@ -111,7 +112,7 @@ func chatSessionExample(ctx context.Context, apiKey string) error {
 }
 
 func streamingChatExample(ctx context.Context, apiKey string) error {
-	client, err := genai_sdk.NewLLMChatClient(ctx, apiKey)
+	client, err := genai_sdk.NewGeminiChatClient(ctx, apiKey, "gemini-1.5-flash")
 	if err != nil {
 		return fmt.Errorf("failed to create chat client: %w", err)
 	}
@@ -138,13 +139,22 @@ func streamingChatExample(ctx context.Context, apiKey string) error {
 }
 
 func basicEmbeddingExample(ctx context.Context, logger *slog.Logger) error {
-	service, err := genai_sdk.NewEmbeddingService(ctx, logger)
+	// Updated to NewGeminiEmbeddingClient
+	service, err := genai_sdk.NewGeminiEmbeddingClient(ctx, "", logger)
 	if err != nil {
 		return fmt.Errorf("failed to create embedding service: %w", err)
 	}
+	// defer service.Close() // Close is available on interface
 
 	text := "This is a sample text for embedding generation"
-	embedding, err := service.GenerateEmbedding(ctx, text, nil)
+
+	// GenerateEmbedding is not in EmbeddingClient interface, so type assert
+	impl, ok := service.(*genai_sdk.GeminiEmbeddingClient)
+	if !ok {
+		return fmt.Errorf("service is not *GeminiEmbeddingClient")
+	}
+
+	embedding, err := impl.GenerateEmbedding(ctx, text, nil)
 	if err != nil {
 		return fmt.Errorf("failed to generate embedding: %w", err)
 	}
@@ -156,7 +166,7 @@ func basicEmbeddingExample(ctx context.Context, logger *slog.Logger) error {
 }
 
 func poiEmbeddingExample(ctx context.Context, logger *slog.Logger) error {
-	service, err := genai_sdk.NewEmbeddingService(ctx, logger)
+	service, err := genai_sdk.NewGeminiEmbeddingClient(ctx, "", logger)
 	if err != nil {
 		return fmt.Errorf("failed to create embedding service: %w", err)
 	}
@@ -173,7 +183,7 @@ func poiEmbeddingExample(ctx context.Context, logger *slog.Logger) error {
 }
 
 func batchEmbeddingExample(ctx context.Context, logger *slog.Logger) error {
-	service, err := genai_sdk.NewEmbeddingService(ctx, logger)
+	service, err := genai_sdk.NewGeminiEmbeddingClient(ctx, "", logger)
 	if err != nil {
 		return fmt.Errorf("failed to create embedding service: %w", err)
 	}

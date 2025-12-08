@@ -13,7 +13,7 @@ type LiveSession struct {
 }
 
 // StartLiveSession opens a live connection to the specified model for bidirectional streaming (text/audio/video).
-func (ai *LLMChatClient) StartLiveSession(ctx context.Context, model string, cfg *genai.LiveConnectConfig) (*LiveSession, error) {
+func (ai *GeminiChatClient) StartLiveSession(ctx context.Context, model string, cfg *genai.LiveConnectConfig) (*LiveSession, error) {
 	if ai.client == nil {
 		return nil, fmt.Errorf("client not initialized")
 	}

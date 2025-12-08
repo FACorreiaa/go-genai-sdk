@@ -16,7 +16,7 @@ type FileClient interface {
 }
 
 // UploadFromPath uploads a local file to the LLM provider.
-func (ai *LLMChatClient) UploadFromPath(ctx context.Context, path string, cfg *genai.UploadFileConfig) (*genai.File, error) {
+func (ai *GeminiChatClient) UploadFromPath(ctx context.Context, path string, cfg *genai.UploadFileConfig) (*genai.File, error) {
 	if ai.client == nil {
 		return nil, fmt.Errorf("client not initialized")
 	}
@@ -27,7 +27,7 @@ func (ai *LLMChatClient) UploadFromPath(ctx context.Context, path string, cfg *g
 }
 
 // List returns all files currently known to the provider.
-func (ai *LLMChatClient) List(ctx context.Context) ([]*genai.File, error) {
+func (ai *GeminiChatClient) List(ctx context.Context) ([]*genai.File, error) {
 	if ai.client == nil {
 		return nil, fmt.Errorf("client not initialized")
 	}
@@ -44,7 +44,7 @@ func (ai *LLMChatClient) List(ctx context.Context) ([]*genai.File, error) {
 }
 
 // Download fetches file bytes for a previously uploaded file.
-func (ai *LLMChatClient) Download(ctx context.Context, file *genai.File, cfg *genai.DownloadFileConfig) ([]byte, error) {
+func (ai *GeminiChatClient) Download(ctx context.Context, file *genai.File, cfg *genai.DownloadFileConfig) ([]byte, error) {
 	if ai.client == nil {
 		return nil, fmt.Errorf("client not initialized")
 	}
@@ -54,4 +54,4 @@ func (ai *LLMChatClient) Download(ctx context.Context, file *genai.File, cfg *ge
 	return ai.client.Files.Download(ctx, file, cfg)
 }
 
-var _ FileClient = (*LLMChatClient)(nil)
+var _ FileClient = (*GeminiChatClient)(nil)
