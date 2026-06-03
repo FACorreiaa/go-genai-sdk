@@ -21,8 +21,10 @@ type ChatClient interface {
 
 // GeminiChatClient adapts the generativeAI LLM client to the ChatClient interface.
 type GeminiChatClient struct {
-	client *genai.Client
-	model  string
+	client      *genai.Client
+	model       string
+	retryPolicy RetryPolicy
+	logger      *slog.Logger
 }
 
 // NewGeminiChatClient creates a ChatClient backed by Gemini.
@@ -37,21 +39,42 @@ func NewGeminiChatClient(ctx context.Context, apiKey, modelName string) (ChatCli
 	if err != nil {
 		return nil, err
 	}
-	return &GeminiChatClient{client: client, model: modelName}, nil
+	return &GeminiChatClient{
+		client:      client,
+		model:       modelName,
+		retryPolicy: DefaultRetryPolicy,
+		logger:      slog.Default(),
+	}, nil
+}
+
+// WithRetryPolicy overrides the default retry policy. Returns the receiver for chaining.
+func (g *GeminiChatClient) WithRetryPolicy(policy RetryPolicy) *GeminiChatClient {
+	g.retryPolicy = policy
+	return g
+}
+
+// WithLogger sets the logger used for retry diagnostics. Returns the receiver for chaining.
+func (g *GeminiChatClient) WithLogger(logger *slog.Logger) *GeminiChatClient {
+	if logger != nil {
+		g.logger = logger
+	}
+	return g
 }
 
 func (g *GeminiChatClient) GenerateResponse(ctx context.Context, prompt string, config *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error) {
-	resp, err := g.client.Models.GenerateContent(ctx, g.model, genai.Text(prompt), config)
-	if err != nil {
-		return nil, err
-	}
-	return resp, nil
+	return retryWithBackoff(ctx, g.retryPolicy, g.logger, "GenerateResponse",
+		func() (*genai.GenerateContentResponse, error) {
+			return g.client.Models.GenerateContent(ctx, g.model, genai.Text(prompt), config)
+		})
 }
 
 func (g *GeminiChatClient) GenerateContent(ctx context.Context, prompt, apiKey string, config *genai.GenerateContentConfig) (string, error) {
 	// Note: apiKey argument is ignored as the client is already initialized with one.
 	// Function signature kept for interface compatibility if needed, but we rely on the client's key.
-	resp, err := g.client.Models.GenerateContent(ctx, g.model, genai.Text(prompt), config)
+	resp, err := retryWithBackoff(ctx, g.retryPolicy, g.logger, "GenerateContent",
+		func() (*genai.GenerateContentResponse, error) {
+			return g.client.Models.GenerateContent(ctx, g.model, genai.Text(prompt), config)
+		})
 	if err != nil {
 		return "", err
 	}
