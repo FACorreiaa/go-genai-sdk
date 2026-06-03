@@ -43,7 +43,11 @@ func TestNewGeminiEmbeddingClient(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			client, err := NewGeminiEmbeddingClient(ctx, "", "", logger)
+			apiKey := ""
+			if tt.setAPIKey {
+				apiKey = "test-key"
+			}
+			client, err := NewGeminiEmbeddingClient(ctx, apiKey, "", logger)
 
 			if tt.expectError {
 				if err == nil {
