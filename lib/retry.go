@@ -31,32 +31,28 @@ var DefaultRetryPolicy = RetryPolicy{
 
 // retryableStatusCodes are HTTP status codes worth retrying with backoff.
 var retryableStatusCodes = map[int]bool{
-	429: true, // Too Many Requests (rate limit)
-	500: true, // Internal Server Error
-	502: true, // Bad Gateway
-	503: true, // Service Unavailable
-	504: true, // Gateway Timeout
+	429: true,
+	500: true,
+	502: true,
+	503: true,
+	504: true,
 }
 
-// isRetryable reports whether an error from the genai client is transient and
-// worth retrying. Context cancellation/deadline are intentionally NOT retried:
-// the caller's deadline has been reached and retrying only wastes budget.
-func isRetryable(err error) bool {
+// IsRetryable reports whether an error from the genai client is transient and
+// worth retrying. Context cancellation/deadline are intentionally NOT retried.
+func IsRetryable(err error) bool {
 	if err == nil {
 		return false
 	}
-	// Caller cancelled or ran out of time: do not retry.
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return false
 	}
 
-	// Typed API error with an HTTP status code.
 	var apiErr genai.APIError
 	if errors.As(err, &apiErr) {
 		return retryableStatusCodes[apiErr.Code]
 	}
 
-	// Fallback: match transient network/server signals in the message.
 	msg := strings.ToLower(err.Error())
 	for _, frag := range []string{
 		"connection reset",
@@ -67,6 +63,8 @@ func isRetryable(err error) bool {
 		"eof",
 		"too many requests",
 		"unavailable",
+		"resource_exhausted",
+		"quota",
 	} {
 		if strings.Contains(msg, frag) {
 			return true
@@ -75,21 +73,15 @@ func isRetryable(err error) bool {
 	return false
 }
 
-// backoffDelay computes an exponential backoff with full jitter for the given
-// retry attempt (0-based), capped at policy.MaxDelay.
 func backoffDelay(policy RetryPolicy, attempt int) time.Duration {
-	delay := policy.BaseDelay << attempt // BaseDelay * 2^attempt
+	delay := policy.BaseDelay << attempt
 	if delay <= 0 || delay > policy.MaxDelay {
 		delay = policy.MaxDelay
 	}
-	// Full jitter: random in [delay/2, delay].
 	half := delay / 2
 	return half + time.Duration(rand.Int63n(int64(half)+1))
 }
 
-// retryWithBackoff runs fn, retrying transient failures with exponential
-// backoff and jitter. It aborts immediately on non-retryable errors or when
-// ctx is done.
 func retryWithBackoff[T any](
 	ctx context.Context,
 	policy RetryPolicy,
@@ -102,7 +94,7 @@ func retryWithBackoff[T any](
 
 	for attempt := 0; attempt <= policy.MaxRetries; attempt++ {
 		result, err = fn()
-		if err == nil || !isRetryable(err) || attempt == policy.MaxRetries {
+		if err == nil || !IsRetryable(err) || attempt == policy.MaxRetries {
 			return result, err
 		}
 

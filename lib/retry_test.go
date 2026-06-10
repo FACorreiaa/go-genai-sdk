@@ -10,7 +10,7 @@ import (
 	"google.golang.org/genai"
 )
 
-func TestIsRetryable(t *testing.T) {
+func TestIsRetryable_exported(t *testing.T) {
 	tests := []struct {
 		name string
 		err  error
@@ -31,8 +31,8 @@ func TestIsRetryable(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isRetryable(tt.err); got != tt.want {
-				t.Errorf("isRetryable(%v) = %v, want %v", tt.err, got, tt.want)
+			if got := IsRetryable(tt.err); got != tt.want {
+				t.Errorf("IsRetryable(%v) = %v, want %v", tt.err, got, tt.want)
 			}
 		})
 	}

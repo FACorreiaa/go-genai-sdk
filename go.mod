@@ -1,10 +1,10 @@
-module github.com/FACorreiaa/go-genai-sdk
+module github.com/FACorreiaa/go-genai-sdk/v2
 
 go 1.24.4
 
 require (
 	github.com/joho/godotenv v1.5.1
-	google.golang.org/genai v1.37.0
+	google.golang.org/genai v1.59.0
 )
 
 require (

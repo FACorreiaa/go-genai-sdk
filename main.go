@@ -75,7 +75,7 @@ func basicChatExample(ctx context.Context, apiKey string) error {
 		MaxOutputTokens: *genai.Ptr[int32](1000), // Assuming fixed or will fix to 1000 or *genai.Ptr(1000)
 	}
 	// Note: apiKey arg in GenerateContent is legacy/interface compatibility, pass same key or ignore
-	response, err := client.GenerateContent(ctx, "Hello! Tell me a short joke.", apiKey, config)
+	response, err := client.GenerateText(ctx, "Hello! Tell me a short joke.", config)
 	if err != nil {
 		return fmt.Errorf("failed to generate content: %w", err)
 	}
@@ -126,7 +126,7 @@ func streamingChatExample(ctx context.Context, apiKey string) error {
 		Temperature: genai.Ptr[float32](0.7),
 	}
 
-	stream, err := client.GenerateContentStream(ctx, "Tell me a short story about AI", config)
+	stream, err := client.GenerateStream(ctx, "Tell me a short story about AI", config)
 	if err != nil {
 		return fmt.Errorf("failed to create stream: %w", err)
 	}

@@ -11,15 +11,15 @@ import (
 
 // ChatClient abstracts LLM chat capabilities needed by domain services.
 type ChatClient interface {
-	GenerateResponse(ctx context.Context, prompt string, config *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error)
-	GenerateContent(ctx context.Context, prompt, apiKey string, config *genai.GenerateContentConfig) (string, error)
-	GenerateContentStream(ctx context.Context, prompt string, config *genai.GenerateContentConfig) (iter.Seq2[*genai.GenerateContentResponse, error], error)
-	GenerateContentStreamWithCache(ctx context.Context, prompt string, config *genai.GenerateContentConfig, cacheKey string) (iter.Seq2[*genai.GenerateContentResponse, error], error)
+	Generate(ctx context.Context, prompt string, config *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error)
+	GenerateText(ctx context.Context, prompt string, config *genai.GenerateContentConfig) (string, error)
+	GenerateStream(ctx context.Context, prompt string, config *genai.GenerateContentConfig) (iter.Seq2[*genai.GenerateContentResponse, error], error)
 	Model() string
+	Close() error
 	StartChatSession(ctx context.Context, config *genai.GenerateContentConfig) (*ChatSession, error)
 }
 
-// GeminiChatClient adapts the generativeAI LLM client to the ChatClient interface.
+// GeminiChatClient adapts the Gemini client to the ChatClient interface.
 type GeminiChatClient struct {
 	client      *genai.Client
 	model       string
@@ -33,7 +33,7 @@ func NewGeminiChatClient(ctx context.Context, apiKey, modelName string) (ChatCli
 		return nil, fmt.Errorf("API key is required")
 	}
 	if modelName == "" {
-		return nil, fmt.Errorf("Model name is required")
+		return nil, fmt.Errorf("model name is required")
 	}
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{APIKey: apiKey})
 	if err != nil {
@@ -47,13 +47,13 @@ func NewGeminiChatClient(ctx context.Context, apiKey, modelName string) (ChatCli
 	}, nil
 }
 
-// WithRetryPolicy overrides the default retry policy. Returns the receiver for chaining.
+// WithRetryPolicy overrides the default retry policy.
 func (g *GeminiChatClient) WithRetryPolicy(policy RetryPolicy) *GeminiChatClient {
 	g.retryPolicy = policy
 	return g
 }
 
-// WithLogger sets the logger used for retry diagnostics. Returns the receiver for chaining.
+// WithLogger sets the logger used for retry diagnostics.
 func (g *GeminiChatClient) WithLogger(logger *slog.Logger) *GeminiChatClient {
 	if logger != nil {
 		g.logger = logger
@@ -61,48 +61,38 @@ func (g *GeminiChatClient) WithLogger(logger *slog.Logger) *GeminiChatClient {
 	return g
 }
 
-func (g *GeminiChatClient) GenerateResponse(ctx context.Context, prompt string, config *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error) {
-	return retryWithBackoff(ctx, g.retryPolicy, g.logger, "GenerateResponse",
+func (g *GeminiChatClient) Generate(ctx context.Context, prompt string, config *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error) {
+	return retryWithBackoff(ctx, g.retryPolicy, g.logger, "Generate",
 		func() (*genai.GenerateContentResponse, error) {
 			return g.client.Models.GenerateContent(ctx, g.model, genai.Text(prompt), config)
 		})
 }
 
-func (g *GeminiChatClient) GenerateContent(ctx context.Context, prompt, apiKey string, config *genai.GenerateContentConfig) (string, error) {
-	// Note: apiKey argument is ignored as the client is already initialized with one.
-	// Function signature kept for interface compatibility if needed, but we rely on the client's key.
-	resp, err := retryWithBackoff(ctx, g.retryPolicy, g.logger, "GenerateContent",
-		func() (*genai.GenerateContentResponse, error) {
-			return g.client.Models.GenerateContent(ctx, g.model, genai.Text(prompt), config)
-		})
+func (g *GeminiChatClient) GenerateText(ctx context.Context, prompt string, config *genai.GenerateContentConfig) (string, error) {
+	resp, err := g.Generate(ctx, prompt, config)
 	if err != nil {
 		return "", err
 	}
-	if len(resp.Candidates) > 0 && len(resp.Candidates[0].Content.Parts) > 0 {
-		return resp.Candidates[0].Content.Parts[0].Text, nil
-	}
-	err = fmt.Errorf("no content generated")
-	return "", err
+	return ExtractText(resp)
 }
 
-func (g *GeminiChatClient) GenerateContentStream(ctx context.Context, prompt string, config *genai.GenerateContentConfig) (iter.Seq2[*genai.GenerateContentResponse, error], error) {
-	// The SDK returns the iterator directly.
-	resp := g.client.Models.GenerateContentStream(ctx, g.model, genai.Text(prompt), config)
-	return resp, nil
-}
-
-func (g *GeminiChatClient) GenerateContentStreamWithCache(ctx context.Context, prompt string, config *genai.GenerateContentConfig, cacheKey string) (iter.Seq2[*genai.GenerateContentResponse, error], error) {
-	// Fallback to normal stream for now as in original logic, but we keep the method signature.
-	if cacheKey != "" {
-		slog.InfoContext(ctx, "Cache key provided but currently ignored in direct implementation", "cacheKey", cacheKey)
-	}
-
-	resp := g.client.Models.GenerateContentStream(ctx, g.model, genai.Text(prompt), config)
-	return resp, nil
+func (g *GeminiChatClient) GenerateStream(ctx context.Context, prompt string, config *genai.GenerateContentConfig) (iter.Seq2[*genai.GenerateContentResponse, error], error) {
+	return retryWithBackoff(ctx, g.retryPolicy, g.logger, "GenerateStream",
+		func() (iter.Seq2[*genai.GenerateContentResponse, error], error) {
+			stream := g.client.Models.GenerateContentStream(ctx, g.model, genai.Text(prompt), config)
+			return stream, nil
+		})
 }
 
 func (g *GeminiChatClient) Model() string {
 	return g.model
+}
+
+func (g *GeminiChatClient) Close() error {
+	if g == nil || g.client == nil {
+		return nil
+	}
+	return nil
 }
 
 type ChatSession struct {
@@ -114,7 +104,6 @@ func (g *GeminiChatClient) StartChatSession(ctx context.Context, config *genai.G
 	if err != nil {
 		return nil, err
 	}
-
 	return &ChatSession{chat: chat}, nil
 }
 
@@ -123,12 +112,7 @@ func (cs *ChatSession) SendMessage(ctx context.Context, message string) (string,
 	if err != nil {
 		return "", err
 	}
-
-	if len(result.Candidates) > 0 && len(result.Candidates[0].Content.Parts) > 0 {
-		responseText := result.Candidates[0].Content.Parts[0].Text
-		return responseText, nil
-	}
-	return "", fmt.Errorf("no response content")
+	return ExtractText(result)
 }
 
 func (cs *ChatSession) SendMessageStream(ctx context.Context, message string) iter.Seq2[*genai.GenerateContentResponse, error] {

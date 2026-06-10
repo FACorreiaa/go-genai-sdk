@@ -56,7 +56,7 @@ func TestNewGeminiChatClient(t *testing.T) {
 	}
 }
 
-func TestGeminiChatClient_GenerateResponse(t *testing.T) {
+func TestGeminiChatClient_Generate(t *testing.T) {
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
 		t.Skip("GEMINI_API_KEY not set, skipping integration test")
@@ -104,7 +104,7 @@ func TestGeminiChatClient_GenerateResponse(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			response, err := client.GenerateResponse(ctx, tt.prompt, config)
+			response, err := client.Generate(ctx, tt.prompt, config)
 
 			if tt.expectError {
 				if err == nil {
@@ -125,7 +125,7 @@ func TestGeminiChatClient_GenerateResponse(t *testing.T) {
 	}
 }
 
-func TestGeminiChatClient_GenerateContent(t *testing.T) {
+func TestGeminiChatClient_GenerateText(t *testing.T) {
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
 		t.Skip("GEMINI_API_KEY not set, skipping integration test")
@@ -142,7 +142,7 @@ func TestGeminiChatClient_GenerateContent(t *testing.T) {
 		MaxOutputTokens: *genai.Ptr[int32](100),
 	}
 
-	response, err := client.GenerateContent(ctx, "Say hello", apiKey, config)
+	response, err := client.GenerateText(ctx, "Say hello", config)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 		return
@@ -292,7 +292,7 @@ func TestChatSession_ConversationFlow(t *testing.T) {
 	}
 }
 
-func TestGeminiChatClient_GenerateContentStream(t *testing.T) {
+func TestGeminiChatClient_GenerateStream(t *testing.T) {
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
 		t.Skip("GEMINI_API_KEY not set, skipping integration test")
@@ -309,7 +309,7 @@ func TestGeminiChatClient_GenerateContentStream(t *testing.T) {
 		MaxOutputTokens: *genai.Ptr[int32](100),
 	}
 
-	stream, err := client.GenerateContentStream(ctx, "Count from 1 to 5", config)
+	stream, err := client.GenerateStream(ctx, "Count from 1 to 5", config)
 	if err != nil {
 		t.Errorf("failed to create stream: %v", err)
 		return
@@ -340,54 +340,6 @@ func TestGeminiChatClient_GenerateContentStream(t *testing.T) {
 
 	if totalText == "" {
 		t.Error("total text should not be empty")
-	}
-}
-
-func TestGeminiChatClient_GenerateContentStreamWithCache(t *testing.T) {
-	apiKey := os.Getenv("GEMINI_API_KEY")
-	if apiKey == "" {
-		t.Skip("GEMINI_API_KEY not set, skipping integration test")
-	}
-
-	ctx := context.Background()
-	client, err := NewGeminiChatClient(ctx, apiKey, "gemini-2.5-flash")
-	if err != nil {
-		t.Fatalf("failed to create client: %v", err)
-	}
-
-	config := &genai.GenerateContentConfig{
-		Temperature:     genai.Ptr[float32](0.1),
-		MaxOutputTokens: *genai.Ptr[int32](50),
-	}
-
-	cacheKey := "test-cache-key"
-	stream, err := client.GenerateContentStreamWithCache(ctx, "Say hello", config, cacheKey)
-	if err != nil {
-		t.Errorf("failed to create stream with cache: %v", err)
-		return
-	}
-
-	responseCount := 0
-	for response, err := range stream {
-		if err != nil {
-			t.Errorf("streaming error: %v", err)
-			break
-		}
-
-		responseCount++
-		if response.Text() == "" {
-			t.Error("response text should not be empty")
-		}
-
-		// Prevent infinite loop
-		if responseCount > 50 {
-			t.Error("too many responses, possible infinite loop")
-			break
-		}
-	}
-
-	if responseCount == 0 {
-		t.Error("expected at least one response from stream")
 	}
 }
 
@@ -462,7 +414,7 @@ func TestGeminiChatClient_WithTimeout(t *testing.T) {
 	}
 
 	// This should complete quickly with a short response
-	_, err = client.GenerateContent(ctx, "Hi", apiKey, config)
+	_, err = client.GenerateText(ctx, "Hi", config)
 	if err != nil {
 		// Context timeout is acceptable for this test
 		if ctx.Err() == context.DeadlineExceeded {
@@ -492,7 +444,7 @@ func BenchmarkGeminiChatClient_GenerateContent(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := client.GenerateContent(ctx, "Hi", apiKey, config)
+		_, err := client.GenerateText(ctx, "Hi", config)
 		if err != nil {
 			b.Errorf("benchmark error: %v", err)
 		}

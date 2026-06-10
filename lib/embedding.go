@@ -30,16 +30,21 @@ type EmbeddingClient interface {
 // GeminiEmbeddingClient adapts the generativeAI embedding service.
 type GeminiEmbeddingClient struct {
 	client *genai.Client
+	model  string
 	logger *slog.Logger
 }
 
 // NewGeminiEmbeddingClient creates an EmbeddingClient backed by Gemini.
-func NewGeminiEmbeddingClient(ctx context.Context, apiKey, modelName string, logger *slog.Logger) (EmbeddingClient, error) {
+// embeddingModel defaults to EmbeddingModel when empty.
+func NewGeminiEmbeddingClient(ctx context.Context, apiKey, embeddingModel string, logger *slog.Logger) (EmbeddingClient, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("API key is required")
 	}
-	if modelName == "" {
-		modelName = EmbeddingModel
+	if embeddingModel == "" {
+		embeddingModel = EmbeddingModel
+	}
+	if logger == nil {
+		logger = slog.Default()
 	}
 
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{
@@ -52,6 +57,7 @@ func NewGeminiEmbeddingClient(ctx context.Context, apiKey, modelName string, log
 
 	return &GeminiEmbeddingClient{
 		client: client,
+		model:  embeddingModel,
 		logger: logger,
 	}, nil
 }
@@ -70,7 +76,7 @@ func (es *GeminiEmbeddingClient) GenerateEmbedding(ctx context.Context, text str
 	}
 
 	// Use the embedding model to generate embeddings
-	embedding, err := es.client.Models.EmbedContent(ctx, EmbeddingModel, genai.Text(text), config)
+	embedding, err := es.client.Models.EmbedContent(ctx, es.model, genai.Text(text), config)
 	if err != nil {
 		es.logger.ErrorContext(ctx, "Failed to generate embedding",
 			slog.Any("error", err),
@@ -91,7 +97,7 @@ func (es *GeminiEmbeddingClient) GenerateEmbedding(ctx context.Context, text str
 
 	es.logger.DebugContext(ctx, "Embedding generated",
 		slog.Int("dimension", len(contentEmbedding.Values)),
-		slog.String("model", EmbeddingModel))
+		slog.String("model", es.model))
 
 	return contentEmbedding.Values, nil
 }
@@ -194,7 +200,7 @@ func (es *GeminiEmbeddingClient) BatchGenerateEmbeddings(ctx context.Context, te
 
 	es.logger.InfoContext(ctx, "Batch embeddings generated",
 		slog.Int("count", len(embeddings)),
-		slog.String("model", EmbeddingModel))
+		slog.String("model", es.model))
 
 	return embeddings, nil
 }
