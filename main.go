@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"os"
 
-	genai_sdk "github.com/FACorreiaa/go-genai-sdk/lib"
+	genai_sdk "github.com/FACorreiaa/go-genai-sdk/v2/lib"
 	"github.com/joho/godotenv"
 	"google.golang.org/genai"
 )

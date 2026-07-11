@@ -29,9 +29,16 @@ type EmbeddingClient interface {
 
 // GeminiEmbeddingClient adapts the generativeAI embedding service.
 type GeminiEmbeddingClient struct {
-	client *genai.Client
-	model  string
-	logger *slog.Logger
+	client      *genai.Client
+	model       string
+	logger      *slog.Logger
+	retryPolicy RetryPolicy
+}
+
+// WithRetryPolicy overrides the default retry policy.
+func (es *GeminiEmbeddingClient) WithRetryPolicy(policy RetryPolicy) *GeminiEmbeddingClient {
+	es.retryPolicy = policy
+	return es
 }
 
 // NewGeminiEmbeddingClient creates an EmbeddingClient backed by Gemini.
@@ -56,9 +63,10 @@ func NewGeminiEmbeddingClient(ctx context.Context, apiKey, embeddingModel string
 	}
 
 	return &GeminiEmbeddingClient{
-		client: client,
-		model:  embeddingModel,
-		logger: logger,
+		client:      client,
+		model:       embeddingModel,
+		logger:      logger,
+		retryPolicy: DefaultRetryPolicy,
 	}, nil
 }
 
@@ -75,8 +83,11 @@ func (es *GeminiEmbeddingClient) GenerateEmbedding(ctx context.Context, text str
 		return nil, fmt.Errorf("text cannot be empty")
 	}
 
-	// Use the embedding model to generate embeddings
-	embedding, err := es.client.Models.EmbedContent(ctx, es.model, genai.Text(text), config)
+	// Use the embedding model to generate embeddings, retrying transient failures.
+	embedding, err := retryWithBackoff(ctx, es.retryPolicy, es.logger, "EmbedContent",
+		func() (*genai.EmbedContentResponse, error) {
+			return es.client.Models.EmbedContent(ctx, es.model, genai.Text(text), config)
+		})
 	if err != nil {
 		es.logger.ErrorContext(ctx, "Failed to generate embedding",
 			slog.Any("error", err),
