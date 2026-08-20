@@ -11,7 +11,7 @@ import (
 
 const (
 	// Gemini embedding model - using the latest embedding model
-	//EmbeddingModel = "text-embedding-004"
+	// EmbeddingModel = "text-embedding-004"
 	EmbeddingModel = "gemini-embedding-exp-03-07"
 	// Standard embedding dimension for Gemini text-embedding-004
 	EmbeddingDimension = 768

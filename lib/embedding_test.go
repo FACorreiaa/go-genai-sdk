@@ -34,12 +34,12 @@ func TestNewGeminiEmbeddingClient(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Save original env var
 			originalAPIKey := os.Getenv("GEMINI_API_KEY")
-			defer os.Setenv("GEMINI_API_KEY", originalAPIKey)
+			defer func() { _ = os.Setenv("GEMINI_API_KEY", originalAPIKey) }()
 
 			if tt.setAPIKey {
-				os.Setenv("GEMINI_API_KEY", "test-key")
+				_ = os.Setenv("GEMINI_API_KEY", "test-key")
 			} else {
-				os.Unsetenv("GEMINI_API_KEY")
+				_ = os.Unsetenv("GEMINI_API_KEY")
 			}
 
 			ctx := context.Background()
@@ -186,7 +186,6 @@ func TestGeminiEmbeddingClient_GenerateEmbeddingWithConfig(t *testing.T) {
 	embedding, err := service.(interface {
 		GenerateEmbedding(ctx context.Context, text string, config *genai.EmbedContentConfig) ([]float32, error)
 	}).GenerateEmbedding(ctx, "Test text with config", config)
-
 	// Note: The interface EmbeddingClient might not expose GenerateEmbedding with config if it wasn't in the interface definition I used?
 	// Let's check existing embedding.go.
 	// Interface: GenerateEmbedding(ctx, text, config) was NOT in the interface I defined in embedding.go!
@@ -195,20 +194,17 @@ func TestGeminiEmbeddingClient_GenerateEmbeddingWithConfig(t *testing.T) {
 	// Ideally the interface explicitly exposes the low level one too if needed, or we rely on specific methods.
 	// For this test, I will assert interface enhancement or use type assertion.
 	// Looking at embedding.go:
-	/*
-		type EmbeddingClient interface {
-			GenerateQueryEmbedding(ctx context.Context, query string) ([]float32, error)
-			...
-			BatchGenerateEmbeddings(ctx context.Context, texts []string) ([][]float32, error)
-			Close()
-		}
-	*/
+	//	type EmbeddingClient interface {
+	//		GenerateQueryEmbedding(ctx context.Context, query string) ([]float32, error)
+	//		...
+	//		BatchGenerateEmbeddings(ctx context.Context, texts []string) ([][]float32, error)
+	//		Close()
+	//	}
 	// GenerateEmbedding is NOT in the interface.
 	// But the struct has it.
 	// I will type assert to *GeminiEmbeddingClient to test it, or just rely on public interface tests.
 	// Since this test specifically tests Config passing which is only available via GenerateEmbedding (unless others expose it), I should test the struct method or added it to interface.
 	// I'll type assert.
-
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 		return
