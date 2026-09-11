@@ -29,6 +29,23 @@ type GeminiChatClient struct {
 
 // NewGeminiChatClient creates a ChatClient backed by Gemini.
 func NewGeminiChatClient(ctx context.Context, apiKey, modelName string) (ChatClient, error) {
+	client, err := NewGeminiClient(ctx, apiKey, modelName)
+	if err != nil {
+		// Returned explicitly rather than as the concrete nil, which would
+		// arrive as a non-nil interface holding a nil pointer and defeat every
+		// caller that checks the client instead of the error.
+		return nil, err
+	}
+	return client, nil
+}
+
+// NewGeminiClient creates the concrete Gemini client.
+//
+// NewGeminiChatClient narrows this to ChatClient, which is what almost every
+// caller wants. This one exists for the callers that need the surfaces
+// ChatClient deliberately leaves out — multimodal input, speech, files —
+// without resorting to a type assertion on an interface value.
+func NewGeminiClient(ctx context.Context, apiKey, modelName string) (*GeminiChatClient, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("API key is required")
 	}
